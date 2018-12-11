@@ -11,16 +11,18 @@ import edu.mit.blocks.renderable.RenderableBlock;
 import edu.mit.blocks.codeblocks.rendering.BlockShapeUtil;
 
 /**
- * Specifies the BlockShape of infix blocks.  Infix blocks have two bottom sockets.  
+ * Specifies the BlockShape of infix blocks. Infix blocks have two bottom
+ * sockets.
  */
 public class InfixBlockShape extends BlockShape {
 
     /**
-     * In order to properly determine where the pen should be after drawing all the blocks, the variable
-     * maxX is used. This stores the maximum x-coordinate visited by the pen and is updated
-     * after each connected block is drawn. After the update, the pen is moved to the maximum
-     * x-coordinate visited. When finished drawing all connected blocks, maxX is reset to 0 to
-     * allow for resizing if some of the connected blocks are removed.
+     * In order to properly determine where the pen should be after drawing all
+     * the blocks, the variable maxX is used. This stores the maximum
+     * x-coordinate visited by the pen and is updated after each connected block
+     * is drawn. After the update, the pen is moved to the maximum x-coordinate
+     * visited. When finished drawing all connected blocks, maxX is reset to 0
+     * to allow for resizing if some of the connected blocks are removed.
      */
     private float maxX = 0; //Stores the maximum X-coordinate visited by the infix block
 
@@ -29,8 +31,8 @@ public class InfixBlockShape extends BlockShape {
     }
 
     /**
-     * Overrided from BlockShape.
-     * Takes into account the need to resize the dimensions of an infix block for various cases.
+     * Overrided from BlockShape. Takes into account the need to resize the
+     * dimensions of an infix block for various cases.
      */
     @Override
     protected void makeBottomSide() {
@@ -42,8 +44,6 @@ public class InfixBlockShape extends BlockShape {
 
         //curve down and right
         BlockShapeUtil.cornerTo(gpBottom, botLeftCorner, botRightCorner, blockCornerRadius);
-
-
 
         /// BOTTOM SOCKETS
         //for each socket in the iterator
@@ -64,7 +64,6 @@ public class InfixBlockShape extends BlockShape {
                             (float) gpBottom.getCurrentPoint().getY());
                 }
 
-
                 //move down so bevel doesn't screw up from connecting infinitely sharp corner
                 // as occurs from a curved port
                 BlockShapeUtil.lineToRelative(gpBottom, 0, -0.1f);
@@ -72,7 +71,6 @@ public class InfixBlockShape extends BlockShape {
                 //////////////////////
                 //begin drawing socket
                 //////////////////////
-
                 if (curSocket.getBlockID() == Block.NULL) {
                     //draw first socket - up left side
                     Point2D leftSocket = BCS.addDataSocketUp(gpBottom, curSocket.getKind(), true);
@@ -80,12 +78,10 @@ public class InfixBlockShape extends BlockShape {
                     //System.out.println("socket poitn: "+rb.getSocketPoint(curSocket));
 
                     //System.out.println("socket poitn leftsocket: "+leftSocket);
-
                     //draw left standard empty socket space - top side
                     gpBottom.lineTo(
                             (float) gpBottom.getCurrentPoint().getX() + BOTTOM_SOCKET_SIDE_SPACER,
                             (float) gpBottom.getCurrentPoint().getY());
-
 
                     //draw first socket - down right side
                     BCS.addDataSocket(gpBottom, curSocket.getKind(), false);
@@ -93,54 +89,48 @@ public class InfixBlockShape extends BlockShape {
                 } else { //there is a connected block
                     Block connectedBlock = rb.getWorkspace().getEnv().getBlock(curSocket.getBlockID());
                     RenderableBlock connectedRBlock = rb.getWorkspace().getEnv().getRenderableBlock(curSocket.getBlockID());
+                    if (connectedBlock != null && connectedRBlock != null) {
 
-                    //calculate and update the new socket point
-                    //update the socket point of this cursocket which should now adopt the plug socket point of its
-                    //connected block since we're also adopting the left side of its shape
+                        //calculate and update the new socket point
+                        //update the socket point of this cursocket which should now adopt the plug socket point of its
+                        //connected block since we're also adopting the left side of its shape
+                        //Use coordinates when the zoom level is 1.0 to calculate socket point
+                        double unzoomX = connectedRBlock.getSocketPixelPoint(connectedBlock.getPlug()).getX() / connectedRBlock.getZoom();
+                        double unzoomY = connectedRBlock.getSocketPixelPoint(connectedBlock.getPlug()).getY() / connectedRBlock.getZoom();
+                        Point2D connectedBlockSocketPoint = new Point2D.Double(unzoomX, unzoomY);
+                        Point2D currentPoint = gpBottom.getCurrentPoint();
+                        double newX = connectedBlockSocketPoint.getX() + Math.abs(connectedBlockSocketPoint.getX() - currentPoint.getX());
+                        double newY = connectedBlockSocketPoint.getY() + Math.abs(connectedRBlock.getBlockHeight() / connectedRBlock.getZoom() - currentPoint.getY());
+                        rb.updateSocketPoint(curSocket, new Point2D.Double(newX, newY));
 
-                    //Use coordinates when the zoom level is 1.0 to calculate socket point
-                    double unzoomX = connectedRBlock.getSocketPixelPoint(connectedBlock.getPlug()).getX() / connectedRBlock.getZoom();
-                    double unzoomY = connectedRBlock.getSocketPixelPoint(connectedBlock.getPlug()).getY() / connectedRBlock.getZoom();
-                    Point2D connectedBlockSocketPoint = new Point2D.Double(unzoomX, unzoomY);
-                    Point2D currentPoint = gpBottom.getCurrentPoint();
-                    double newX = connectedBlockSocketPoint.getX() + Math.abs(connectedBlockSocketPoint.getX() - currentPoint.getX());
-                    double newY = connectedBlockSocketPoint.getY() + Math.abs(connectedRBlock.getBlockHeight() / connectedRBlock.getZoom() - currentPoint.getY());
-                    rb.updateSocketPoint(curSocket, new Point2D.Double(newX, newY));
+                        BlockShape connectedBlockShape = rb.getWorkspace().getEnv().getRenderableBlock(curSocket.getBlockID()).getBlockShape();
+                        //append left side of connected block
+                        appendPath(gpBottom, connectedBlockShape.getLeftSide(), false);
 
-
-                    BlockShape connectedBlockShape = rb.getWorkspace().getEnv().getRenderableBlock(curSocket.getBlockID()).getBlockShape();
-                    //append left side of connected block
-                    appendPath(gpBottom, connectedBlockShape.getLeftSide(), false);
-
-
-
-
-                    //append right side of connected block (more complicated)
-                    if (connectedBlock.getNumSockets() == 0 || connectedBlock.isInfix()) {
+                        //append right side of connected block (more complicated)
+                        if (connectedBlock.getNumSockets() == 0 || connectedBlock.isInfix()) {
 //                      append top side of connected block
-                        appendPath(gpBottom, connectedBlockShape.getTopSide(), false);
-                        appendPath(gpBottom, connectedBlockShape.getRightSide(), false);
-                    } else {
-                        //iterate through the sockets of the connected block, checking if 
-                        //it has blocks connected to them
-                        appendRightSidePath(gpBottom, connectedBlock, connectedBlockShape);
+                            appendPath(gpBottom, connectedBlockShape.getTopSide(), false);
+                            appendPath(gpBottom, connectedBlockShape.getRightSide(), false);
+                        } else {
+                            //iterate through the sockets of the connected block, checking if 
+                            //it has blocks connected to them
+                            appendRightSidePath(gpBottom, connectedBlock, connectedBlockShape);
+                        }
+
+                        // Updates the maximum X-coordinate and sets the current point to maxX 
+                        if (maxX < (float) gpBottom.getCurrentPoint().getX()) {
+                            maxX = (float) gpBottom.getCurrentPoint().getX();
+                        }
+                        gpBottom.lineTo(maxX, (float) gpBottom.getCurrentPoint().getY());
+
                     }
-
-                    // Updates the maximum X-coordinate and sets the current point to maxX 
-                    if (maxX < (float) gpBottom.getCurrentPoint().getX()) {
-                        maxX = (float) gpBottom.getCurrentPoint().getX();
-                    }
-                    gpBottom.lineTo(maxX, (float) gpBottom.getCurrentPoint().getY());
-
-
                 }
-
 
                 //bump down so bevel doesn't screw up
                 BlockShapeUtil.lineToRelative(gpBottom, 0, 0.1f);
 
                 //System.out.println("gpbottom starting point: "+gpBottom.getCurrentPoint());
-
                 //// draw RIGHT to create divider ////
                 if (socketCounter < block.getNumSockets() - 1) {
                     gpBottom.lineTo( //need to add the width of the block label.  warning: this assumes that there is only one block label
@@ -156,7 +146,6 @@ public class InfixBlockShape extends BlockShape {
             }
         }
 
-
         //curve right and up
         BlockShapeUtil.cornerTo(gpBottom, botRightCorner, topRightCorner, blockCornerRadius);
 
@@ -165,18 +154,18 @@ public class InfixBlockShape extends BlockShape {
     }
 
     /**
-     * Appends the right side path of the stack of blocks connected to the specified connectedBlock.  If there are 
-     * some empty sockets, this method will append empty placeholders.  
+     * Appends the right side path of the stack of blocks connected to the
+     * specified connectedBlock. If there are some empty sockets, this method
+     * will append empty placeholders.
+     *
      * @param gpBottom the GeneralPath to append the new path to
-     * @param connectedBlock the Block instance whose right side of its stack of connected blocks will be appened to the 
-     * specified gpBottom
+     * @param connectedBlock the Block instance whose right side of its stack of
+     * connected blocks will be appened to the specified gpBottom
      * @param connectedBlockShape the BlockShape of the specified connectedBlock
      */
     private void appendRightSidePath(GeneralPath gpBottom, Block connectedBlock, BlockShape connectedBlockShape) {
 
         //int lastBottomPathWidth;
-
-
         //append top side of connected block
         appendPath(gpBottom, connectedBlockShape.getTopSide(), false);
 
@@ -221,16 +210,15 @@ public class InfixBlockShape extends BlockShape {
     }
 
     /**
-     * Overrided from BlockShape.
-     * Determines the width of the sum of the bottom sockets and uses it if it is
-     * greater than the width determined by the determineBlockWidth in BlockShape.
-     * Else, it returns the sum of these two values.
+     * Overrided from BlockShape. Determines the width of the sum of the bottom
+     * sockets and uses it if it is greater than the width determined by the
+     * determineBlockWidth in BlockShape. Else, it returns the sum of these two
+     * values.
      */
     @Override
     protected int determineBlockWidth() {
 
         //System.out.println("determining block width");
-
         int width = super.determineBlockWidth();
 
         //if the sum of bottom sockets is greater than the calculated width, then use it
@@ -254,7 +242,6 @@ public class InfixBlockShape extends BlockShape {
             }
         }
 
-
         bottomSocketWidth += 2 * BOTTOM_SOCKET_MIDDLE_SPACER;  //TODO need to decide for a size of the middle spacer and how to place them
         bottomSocketWidth += 2 * BOTTOM_SOCKET_SIDE_SPACER;
 
@@ -272,8 +259,11 @@ public class InfixBlockShape extends BlockShape {
         return width;
     }
 
-    /** Append gp2 to gp1.  If reversed == true, then add the segments in reverse order 
-     * NOTE: copied and pasted from starlogoblocks/blockengine/BlockShape.java */
+    /**
+     * Append gp2 to gp1. If reversed == true, then add the segments in reverse
+     * order NOTE: copied and pasted from
+     * starlogoblocks/blockengine/BlockShape.java
+     */
     private void appendPath(GeneralPath gp1, GeneralPath gp2, boolean reversed) {
         ArrayList<Number[]> points = new ArrayList<Number[]>(); // Each element is an array consisting of one Integer and six Floats
 
@@ -288,14 +278,14 @@ public class InfixBlockShape extends BlockShape {
             i.next();
 
             points.add(new Number[]{
-                        new Integer(type),
-                        new Float(segment[0]),
-                        new Float(segment[1]),
-                        new Float(segment[2]),
-                        new Float(segment[3]),
-                        new Float(segment[4]),
-                        new Float(segment[5])
-                    });
+                new Integer(type),
+                new Float(segment[0]),
+                new Float(segment[1]),
+                new Float(segment[2]),
+                new Float(segment[3]),
+                new Float(segment[4]),
+                new Float(segment[5])
+            });
         }
 
         if (!reversed) {

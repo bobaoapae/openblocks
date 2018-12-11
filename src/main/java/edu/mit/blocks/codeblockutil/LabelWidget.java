@@ -22,7 +22,6 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
-
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -646,6 +645,8 @@ public abstract class LabelWidget extends JComponent {
                 //then set it to the editing state when the label is clicked on
                 setEditingState(true);
                 textField.setSelectionStart(0);
+            }else if(e.getClickCount()==1 && hasSiblings){
+                menu.mousePressed(e);
             }
         }
 

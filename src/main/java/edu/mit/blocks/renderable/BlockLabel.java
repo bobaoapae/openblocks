@@ -1,5 +1,11 @@
 package edu.mit.blocks.renderable;
 
+import edu.mit.blocks.codeblocks.Block;
+import edu.mit.blocks.codeblocks.BlockConnector;
+import edu.mit.blocks.codeblocks.BlockStub;
+import edu.mit.blocks.codeblockutil.LabelWidget;
+import edu.mit.blocks.workspace.Workspace;
+import edu.mit.blocks.workspace.WorkspaceEvent;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -10,16 +16,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.util.List;
-
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
-
-import edu.mit.blocks.codeblocks.Block;
-import edu.mit.blocks.codeblocks.BlockConnector;
-import edu.mit.blocks.codeblocks.BlockStub;
-import edu.mit.blocks.codeblockutil.LabelWidget;
-import edu.mit.blocks.workspace.Workspace;
-import edu.mit.blocks.workspace.WorkspaceEvent;
 
 /**
  * BlockLabel is a region on a block in which text is displayed and possibly edited.  The
